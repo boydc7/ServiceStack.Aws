@@ -3,7 +3,6 @@
   <PropertyGroup>
     <PackageId>ServiceStack.Aws</PackageId>
     <AssemblyName>ServiceStack.Aws</AssemblyName>
-    <TargetFrameworks>net45;netstandard2.0</TargetFrameworks>
     <Title>ServiceStack integration for Amazon Web Services (AWS)</Title>
     <PackageDescription>
       ServiceStack integration for Amazon Web Services (AWS) including:
@@ -16,6 +15,7 @@
       - DynamoDbCacheClient - A Caching Provider for DynamoDB
     </PackageDescription>
     <PackageTags>ServiceStack;AWS;Amazon;WebServices;DynamoDb;S3;SQS;Cache;CacheClient</PackageTags>
+    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

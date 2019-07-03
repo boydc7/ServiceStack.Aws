@@ -3,6 +3,7 @@
   <PropertyGroup>
     <PackageId>ServiceStack.Aws</PackageId>
     <AssemblyName>ServiceStack.Aws</AssemblyName>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <Title>ServiceStack integration for Amazon Web Services (AWS)</Title>
     <PackageDescription>
       ServiceStack integration for Amazon Web Services (AWS) including:
@@ -15,15 +16,13 @@
       - DynamoDbCacheClient - A Caching Provider for DynamoDB
     </PackageDescription>
     <PackageTags>ServiceStack;AWS;Amazon;WebServices;DynamoDb;S3;SQS;Cache;CacheClient</PackageTags>
-    <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ServiceStack" Version="$(Version)" />
-    <PackageReference Include="AWSSDK.Core" Version="3.3.102.2" />
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.101.20" />
-    <PackageReference Include="AWSSDK.S3" Version="3.3.102.11" />
-    <PackageReference Include="AWSSDK.SQS" Version="3.3.100.30" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.32.2" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.17.13" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.31.24" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.3.3.62" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
@@ -32,6 +31,10 @@
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.5.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\ServiceStack\src\ServiceStack\ServiceStack.csproj" />
   </ItemGroup>
 
 </Project>

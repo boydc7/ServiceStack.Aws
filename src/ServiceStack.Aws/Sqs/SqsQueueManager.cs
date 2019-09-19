@@ -231,17 +231,15 @@ namespace ServiceStack.Aws.Sqs
                         (QueueNames.IsTempQueue(queueName.QueueName)
                             ? SqsQueueDefinition.DefaultTempQueueRetentionSeconds
                             : SqsQueueDefinition.DefaultPermanentQueueRetentionSeconds).ToString(CultureInfo.InvariantCulture)
-                    },
-                    {
-                        QueueAttributeName.FifoQueue,
-                        isFifoQueue ? "true" : "false"
-                    },
-                    {
-                        QueueAttributeName.ContentBasedDeduplication,
-                        "false"
                     }
                 }
             };
+
+            if (isFifoQueue)
+            {
+                request.Attributes[QueueAttributeName.FifoQueue] = "true";
+                request.Attributes[QueueAttributeName.ContentBasedDeduplication] = "false";
+            }
 
             if (redrivePolicy != null)
             {

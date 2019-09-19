@@ -24,6 +24,7 @@
             ChangeVisibilityBufferSize = MaxBatchCvItems;
             ReceiveWaitTime = DefaultWaitTimeSeconds;
             VisibilityTimeout = DefaultVisibilityTimeoutSeconds;
+            IsFifoQueue = false;
         }
 
         public string QueueName => SqsQueueName.QueueName;
@@ -38,6 +39,7 @@
         public long CreatedTimestamp { get; set; }
         public SqsRedrivePolicy RedrivePolicy { get; set; }
         public bool DisableBuffering { get; set; }
+        public bool IsFifoQueue { get; set; }
 
         private int sendBufferSize = 1;
         public int SendBufferSize

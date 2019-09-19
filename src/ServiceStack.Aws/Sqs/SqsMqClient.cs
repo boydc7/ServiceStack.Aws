@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Amazon.SQS.Model;
+using ServiceStack.DataAnnotations;
 using ServiceStack.Messaging;
 using Message = Amazon.SQS.Model.Message;
 

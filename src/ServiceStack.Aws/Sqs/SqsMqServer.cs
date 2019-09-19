@@ -178,7 +178,7 @@ namespace ServiceStack.Aws.Sqs
                                        Action<IMessageHandler, IMessage<T>, Exception> processExceptionEx,
                                        int noOfThreads, int? retryCount = null,
                                        int? visibilityTimeoutSeconds = null, int? receiveWaitTimeSeconds = null,
-                                       bool? disableBuffering = null)
+                                       bool? disableBuffering = null, bool isFifoQueue = false)
         {
             var type = typeof(T);
 
@@ -201,7 +201,8 @@ namespace ServiceStack.Aws.Sqs
                 ThreadCount = noOfThreads,
                 VisibilityTimeout = visibilityTimeoutSeconds ?? this.VisibilityTimeout,
                 ReceiveWaitTime = receiveWaitTimeSeconds ?? this.ReceiveWaitTime,
-                DisableBuffering = disableBuffering ?? this.DisableBuffering
+                DisableBuffering = disableBuffering ?? this.DisableBuffering,
+                IsFifoQueue = isFifoQueue
             };
 
             LicenseUtils.AssertValidUsage(LicenseFeature.ServiceStack, QuotaType.Operations, handlerMap.Count);

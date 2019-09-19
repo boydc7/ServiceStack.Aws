@@ -18,6 +18,7 @@ namespace ServiceStack.Aws.Sqs
         private readonly ConcurrentDictionary<string, SqsQueueDefinition> queueNameMap = new ConcurrentDictionary<string, SqsQueueDefinition>();
 
         private readonly SqsConnectionFactory sqsConnectionFactory;
+
         private IAmazonSQS sqsClient;
 
         public SqsQueueManager(SqsConnectionFactory sqsConnectionFactory)
@@ -38,11 +39,11 @@ namespace ServiceStack.Aws.Sqs
 
         public ConcurrentDictionary<string, SqsQueueDefinition> QueueNameMap => queueNameMap;
 
-        private SqsQueueName GetSqsQueueName(string queueName)
+        private SqsQueueName GetSqsQueueName(string queueName, bool isFifoQueue = false)
         {
             return queueNameMap.TryGetValue(queueName, out var qd)
                 ? qd.SqsQueueName
-                : SqsQueueNames.GetSqsQueueName(queueName);
+                : SqsQueueNames.GetSqsQueueName(queueName, isFifoQueue);
         }
 
         public IAmazonSQS SqsClient => sqsClient ?? (sqsClient = sqsConnectionFactory.GetClient());
@@ -133,13 +134,14 @@ namespace ServiceStack.Aws.Sqs
         }
 
         public SqsQueueDefinition GetOrCreate(string queueName, int? visibilityTimeoutSeconds = null,
-                                              int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null)
+                                              int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null,
+                                              bool isFifoQueue = false)
         {
             if (QueueExists(queueName) && queueNameMap.TryGetValue(queueName, out var qd))
                 return qd;
 
-            qd = CreateQueue(GetSqsQueueName(queueName), visibilityTimeoutSeconds,
-                             receiveWaitTimeSeconds, disasbleBuffering);
+            qd = CreateQueue(GetSqsQueueName(queueName, isFifoQueue), visibilityTimeoutSeconds,
+                             receiveWaitTimeSeconds, disasbleBuffering, isFifoQueue: isFifoQueue);
 
             return qd;
         }
@@ -189,26 +191,27 @@ namespace ServiceStack.Aws.Sqs
                 };
 
             return CreateQueue(GetSqsQueueName(queueName), info.VisibilityTimeout, info.ReceiveWaitTime,
-                               info.DisableBuffering, redrivePolicy);
+                               info.DisableBuffering, redrivePolicy, info.IsFifoQueue);
         }
 
         public SqsQueueDefinition CreateQueue(string queueName, int? visibilityTimeoutSeconds = null,
                                               int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null,
-                                              SqsRedrivePolicy redrivePolicy = null)
+                                              SqsRedrivePolicy redrivePolicy = null, bool isFifoQueue = false)
         {
-            return CreateQueue(GetSqsQueueName(queueName), visibilityTimeoutSeconds, receiveWaitTimeSeconds,
-                               disasbleBuffering, redrivePolicy);
+            return CreateQueue(GetSqsQueueName(queueName, isFifoQueue), visibilityTimeoutSeconds, receiveWaitTimeSeconds,
+                               disasbleBuffering, redrivePolicy, isFifoQueue);
         }
 
         private SqsQueueDefinition CreateQueue(SqsQueueName queueName, int? visibilityTimeoutSeconds = null,
                                                int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null,
-                                               SqsRedrivePolicy redrivePolicy = null)
+                                               SqsRedrivePolicy redrivePolicy = null, bool isFifoQueue = false)
         {
             SqsQueueDefinition queueDefinition = null;
 
             var request = new CreateQueueRequest
             {
                 QueueName = queueName.AwsQueueName,
+
                 Attributes = new Dictionary<string, string>
                 {
                     {
@@ -228,6 +231,14 @@ namespace ServiceStack.Aws.Sqs
                         (QueueNames.IsTempQueue(queueName.QueueName)
                             ? SqsQueueDefinition.DefaultTempQueueRetentionSeconds
                             : SqsQueueDefinition.DefaultPermanentQueueRetentionSeconds).ToString(CultureInfo.InvariantCulture)
+                    },
+                    {
+                        QueueAttributeName.FifoQueue,
+                        isFifoQueue ? "true" : "false"
+                    },
+                    {
+                        QueueAttributeName.ContentBasedDeduplication,
+                        "false"
                     }
                 }
             };
@@ -356,7 +367,7 @@ namespace ServiceStack.Aws.Sqs
 
             var queues = SqsClient.ListQueues(new ListQueuesRequest
             {
-                QueueNamePrefix = QueueNames.TempMqPrefix.ToValidQueueName()
+                QueueNamePrefix = QueueNames.TempMqPrefix.ToValidQueueName(isFifoQueue: false)
             });
 
             if (queues == null || queues.QueueUrls == null || queues.QueueUrls.Count <= 0)

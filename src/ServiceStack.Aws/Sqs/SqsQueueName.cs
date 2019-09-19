@@ -7,12 +7,16 @@ namespace ServiceStack.Aws.Sqs
     {
         private static readonly ConcurrentDictionary<string, SqsQueueName> queueNameMap = new ConcurrentDictionary<string, SqsQueueName>();
 
-        public static SqsQueueName GetSqsQueueName(string originalQueueName)
+        public const string FifoQueueSuffix = ".fifo";
+
+        public static SqsQueueName GetSqsQueueName(string originalQueueName, bool isFifoQueue = false)
         {
             if (queueNameMap.TryGetValue(originalQueueName, out var sqn))
                 return sqn;
 
-            sqn = new SqsQueueName(originalQueueName);
+            isFifoQueue = isFifoQueue || originalQueueName.EndsWith(FifoQueueSuffix, StringComparison.OrdinalIgnoreCase);
+
+            sqn = new SqsQueueName(originalQueueName, isFifoQueue);
 
             return queueNameMap.TryAdd(originalQueueName, sqn)
                 ? sqn
@@ -22,10 +26,10 @@ namespace ServiceStack.Aws.Sqs
 
     public class SqsQueueName : IEquatable<SqsQueueName>
     {
-        public SqsQueueName(string originalQueueName)
+        public SqsQueueName(string originalQueueName, bool isFifoQueue)
         {
             QueueName = originalQueueName;
-            AwsQueueName = originalQueueName.ToValidQueueName();
+            AwsQueueName = originalQueueName.ToValidQueueName(isFifoQueue);
         }
 
         public string QueueName { get; }

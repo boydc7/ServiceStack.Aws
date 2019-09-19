@@ -23,19 +23,26 @@ namespace ServiceStack.Aws.Sqs
                     $"Batch Entry exception for operation [{methodOperation}]. Id [{entry.Id}], Code [{entry.Code}], Is Sender Fault [{entry.SenderFault}]. Message [{entry.Message}].");
         }
 
-        public static string ToValidQueueName(this string queueName)
+        public static string ToValidQueueName(this string queueName, bool isFifoQueue)
         {
-            if (IsValidQueueName(queueName))
+            if (IsValidQueueName(queueName, isFifoQueue))
                 return queueName;
 
             var validQueueName = Regex.Replace(queueName, @"([^\d\w-_])", "-");
+
+            if (isFifoQueue && !queueName.EndsWith(SqsQueueNames.FifoQueueSuffix))
+            {
+                validQueueName = string.Concat(validQueueName, SqsQueueNames.FifoQueueSuffix);
+            }
+
             return validQueueName;
         }
 
-        public static bool IsValidQueueName(this string queueName)
+        public static bool IsValidQueueName(this string queueName, bool isFifoQueue)
         {
             return queueName.All(c => char.IsLetterOrDigit(c) ||
-                SqsQueueDefinition.ValidNonAlphaNumericChars.Contains(c));
+                                      SqsQueueDefinition.ValidNonAlphaNumericChars.Contains(c)) &&
+                   (!isFifoQueue || queueName.EndsWith(SqsQueueNames.FifoQueueSuffix));
         }
 
         public static SetQueueAttributesRequest ToSetAttributesRequest(this CreateQueueRequest request, string queueUrl)
@@ -50,35 +57,36 @@ namespace ServiceStack.Aws.Sqs
         public static SqsQueueDefinition ToQueueDefinition(this Dictionary<string, string> attributes, SqsQueueName queueName,
                                                            string queueUrl, bool disableBuffering)
         {
-            var attrToUse = attributes ?? new Dictionary<string, string>();
+            var attrToUse = attributes ?? TypeConstants.EmptyStringDictionary;
 
             Guard.AgainstNullArgument(queueName, "queueName");
             Guard.AgainstNullArgument(queueUrl, "queueUrl");
 
             return new SqsQueueDefinition
-            {
-                SqsQueueName = queueName,
-                QueueUrl = queueUrl,
-                VisibilityTimeout = attrToUse.ContainsKey(QueueAttributeName.VisibilityTimeout)
-                    ? attrToUse[QueueAttributeName.VisibilityTimeout].ToInt(SqsQueueDefinition.DefaultVisibilityTimeoutSeconds)
-                    : SqsQueueDefinition.DefaultVisibilityTimeoutSeconds,
-                ReceiveWaitTime = attrToUse.ContainsKey(QueueAttributeName.ReceiveMessageWaitTimeSeconds)
-                    ? attrToUse[QueueAttributeName.ReceiveMessageWaitTimeSeconds].ToInt(SqsQueueDefinition.DefaultWaitTimeSeconds)
-                    : SqsQueueDefinition.DefaultWaitTimeSeconds,
-                CreatedTimestamp = attrToUse.ContainsKey(QueueAttributeName.CreatedTimestamp)
-                    ? attrToUse[QueueAttributeName.CreatedTimestamp].ToInt64(DateTime.UtcNow.ToUnixTime())
-                    : DateTime.UtcNow.ToUnixTime(),
-                DisableBuffering = disableBuffering,
-                ApproximateNumberOfMessages = attrToUse.ContainsKey(QueueAttributeName.ApproximateNumberOfMessages)
-                    ? attrToUse[QueueAttributeName.ApproximateNumberOfMessages].ToInt64(0)
-                    : 0,
-                QueueArn = attrToUse.ContainsKey(QueueAttributeName.QueueArn)
-                    ? attrToUse[QueueAttributeName.QueueArn]
-                    : null,
-                RedrivePolicy = attrToUse.ContainsKey(QueueAttributeName.RedrivePolicy)
-                    ? attrToUse[QueueAttributeName.RedrivePolicy].FromJson<SqsRedrivePolicy>()
-                    : null
-            };
+                   {
+                       SqsQueueName = queueName,
+                       QueueUrl = queueUrl,
+                       VisibilityTimeout = attrToUse.ContainsKey(QueueAttributeName.VisibilityTimeout)
+                                               ? attrToUse[QueueAttributeName.VisibilityTimeout].ToInt(SqsQueueDefinition.DefaultVisibilityTimeoutSeconds)
+                                               : SqsQueueDefinition.DefaultVisibilityTimeoutSeconds,
+                       ReceiveWaitTime = attrToUse.ContainsKey(QueueAttributeName.ReceiveMessageWaitTimeSeconds)
+                                             ? attrToUse[QueueAttributeName.ReceiveMessageWaitTimeSeconds].ToInt(SqsQueueDefinition.DefaultWaitTimeSeconds)
+                                             : SqsQueueDefinition.DefaultWaitTimeSeconds,
+                       CreatedTimestamp = attrToUse.ContainsKey(QueueAttributeName.CreatedTimestamp)
+                                              ? attrToUse[QueueAttributeName.CreatedTimestamp].ToInt64(DateTime.UtcNow.ToUnixTime())
+                                              : DateTime.UtcNow.ToUnixTime(),
+                       DisableBuffering = disableBuffering,
+                       ApproximateNumberOfMessages = attrToUse.ContainsKey(QueueAttributeName.ApproximateNumberOfMessages)
+                                                         ? attrToUse[QueueAttributeName.ApproximateNumberOfMessages].ToInt64(0)
+                                                         : 0,
+                       QueueArn = attrToUse.ContainsKey(QueueAttributeName.QueueArn)
+                                      ? attrToUse[QueueAttributeName.QueueArn]
+                                      : null,
+                       RedrivePolicy = attrToUse.ContainsKey(QueueAttributeName.RedrivePolicy)
+                                           ? attrToUse[QueueAttributeName.RedrivePolicy].FromJson<SqsRedrivePolicy>()
+                                           : null,
+                       IsFifoQueue = attrToUse.ContainsKey(QueueAttributeName.FifoQueue) && Convert.ToBoolean(attrToUse[QueueAttributeName.FifoQueue])
+                   };
         }
 
         public static Message<T> FromSqsMessage<T>(this Message sqsMessage, string queueName)
@@ -138,10 +146,14 @@ namespace ServiceStack.Aws.Sqs
 
         public static SendMessageRequest ToSqsSendMessageRequest(this IMessage message, SqsQueueDefinition queueDefinition)
         {
+            var messageIdString = message.Id.ToString("N");
+
             var to = new SendMessageRequest
             {
                 QueueUrl = queueDefinition.QueueUrl,
                 MessageBody = message.Body.ToJson(),
+                MessageDeduplicationId = messageIdString,
+                MessageGroupId = messageIdString,
                 MessageAttributes = new Dictionary<string, MessageAttributeValue>
                 {
                     { "CreatedDate", message.CreatedDate.AsMessageAttributeValue() },

@@ -25,6 +25,7 @@ namespace ServiceStack.Aws.Sqs
             }
         }
 
+        public bool IsFifoQueue { get; set; }
         public bool DisableBuffering { get; set; }
         public QueueNames QueueNames { get; private set; }
         

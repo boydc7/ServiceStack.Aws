@@ -11,13 +11,14 @@ namespace ServiceStack.Aws.Sqs
         int DefaultReceiveWaitTime { get; set; }
         int DefaultVisibilityTimeout { get; set; }
         bool DisableBuffering { get; set; }
+
         ConcurrentDictionary<string, SqsQueueDefinition> QueueNameMap { get; }
         IAmazonSQS SqsClient { get; }
 
-        SqsQueueDefinition CreateQueue(string queueName, int? visibilityTimeoutSeconds = null, int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null, SqsRedrivePolicy redrivePolicy = null);
+        SqsQueueDefinition CreateQueue(string queueName, int? visibilityTimeoutSeconds = null, int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null, SqsRedrivePolicy redrivePolicy = null, bool isFifoQueue = false);
         SqsQueueDefinition CreateQueue(string queueName, SqsMqWorkerInfo info, string redriveArn = null);
         void DeleteQueue(string queueName);
-        SqsQueueDefinition GetOrCreate(string queueName, int? visibilityTimeoutSeconds = null, int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null);
+        SqsQueueDefinition GetOrCreate(string queueName, int? visibilityTimeoutSeconds = null, int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null, bool isFifoQueue = false);
         SqsQueueDefinition GetQueueDefinition(string queueName, bool forceRecheck = false);
         string GetQueueUrl(string queueName, bool forceRecheck = false);
         void PurgeQueue(string queueName);

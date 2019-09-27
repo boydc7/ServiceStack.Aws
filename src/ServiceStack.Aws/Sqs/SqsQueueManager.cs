@@ -39,7 +39,7 @@ namespace ServiceStack.Aws.Sqs
 
         public ConcurrentDictionary<string, SqsQueueDefinition> QueueNameMap => queueNameMap;
 
-        private SqsQueueName GetSqsQueueName(string queueName, bool isFifoQueue = false)
+        private SqsQueueName GetSqsQueueName(string queueName, bool isFifoQueue)
         {
             return queueNameMap.TryGetValue(queueName, out var qd)
                 ? qd.SqsQueueName
@@ -48,9 +48,9 @@ namespace ServiceStack.Aws.Sqs
 
         public IAmazonSQS SqsClient => sqsClient ?? (sqsClient = sqsConnectionFactory.GetClient());
 
-        public bool QueueExists(string queueName, bool forceRecheck = false)
+        public bool QueueExists(string queueName, bool forceRecheck = false, bool isFifoQueue = false)
         {
-            return QueueExists(GetSqsQueueName(queueName), forceRecheck);
+            return QueueExists(GetSqsQueueName(queueName, isFifoQueue), forceRecheck);
         }
 
         private bool QueueExists(SqsQueueName queueName, bool forceRecheck = false)
@@ -78,9 +78,9 @@ namespace ServiceStack.Aws.Sqs
             }
         }
 
-        public string GetQueueUrl(string queueName, bool forceRecheck = false)
+        public string GetQueueUrl(string queueName, bool forceRecheck = false, bool isFifoQueue = false)
         {
-            return GetQueueUrl(GetSqsQueueName(queueName), forceRecheck);
+            return GetQueueUrl(GetSqsQueueName(queueName, isFifoQueue), forceRecheck);
         }
 
         private string GetQueueUrl(SqsQueueName queueName, bool forceRecheck = false)
@@ -97,9 +97,9 @@ namespace ServiceStack.Aws.Sqs
             return response.QueueUrl;
         }
 
-        public SqsQueueDefinition GetQueueDefinition(string queueName, bool forceRecheck = false)
+        public SqsQueueDefinition GetQueueDefinition(string queueName, bool forceRecheck = false, bool isFifoQueue = false)
         {
-            return GetQueueDefinition(GetSqsQueueName(queueName), forceRecheck);
+            return GetQueueDefinition(GetSqsQueueName(queueName, isFifoQueue), forceRecheck);
         }
 
         private SqsQueueDefinition GetQueueDefinition(SqsQueueName queueName, bool forceRecheck = false)
@@ -111,9 +111,9 @@ namespace ServiceStack.Aws.Sqs
             return GetQueueDefinition(queueName, queueUrl);
         }
 
-        private SqsQueueDefinition GetQueueDefinition(string queueName, string queueUrl)
+        private SqsQueueDefinition GetQueueDefinition(string queueName, string queueUrl, bool isFifoQueue = false)
         {
-            return GetQueueDefinition(GetSqsQueueName(queueName), queueUrl);
+            return GetQueueDefinition(GetSqsQueueName(queueName, isFifoQueue), queueUrl);
         }
 
         private SqsQueueDefinition GetQueueDefinition(SqsQueueName queueName, string queueUrl)
@@ -137,7 +137,7 @@ namespace ServiceStack.Aws.Sqs
                                               int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null,
                                               bool isFifoQueue = false)
         {
-            if (QueueExists(queueName) && queueNameMap.TryGetValue(queueName, out var qd))
+            if (QueueExists(queueName, isFifoQueue: isFifoQueue) && queueNameMap.TryGetValue(queueName, out var qd))
                 return qd;
 
             qd = CreateQueue(GetSqsQueueName(queueName, isFifoQueue), visibilityTimeoutSeconds,
@@ -146,12 +146,12 @@ namespace ServiceStack.Aws.Sqs
             return qd;
         }
 
-        public void DeleteQueue(string queueName)
+        public void DeleteQueue(string queueName, bool isFifoQueue = false)
         {
             try
             {
-                var queueUrl = GetQueueUrl(queueName);
-                DeleteQueue(queueName, queueUrl);
+                var queueUrl = GetQueueUrl(queueName, isFifoQueue: isFifoQueue);
+                DeleteQueue(queueName, queueUrl, isFifoQueue);
             }
             catch (QueueDoesNotExistException) { }
             catch (AmazonSQSException sqsex)
@@ -163,9 +163,9 @@ namespace ServiceStack.Aws.Sqs
             }
         }
 
-        private void DeleteQueue(string queueName, string queueUrl)
+        private void DeleteQueue(string queueName, string queueUrl, bool isFifoQueue)
         {
-            DeleteQueue(GetSqsQueueName(queueName), queueUrl);
+            DeleteQueue(GetSqsQueueName(queueName, isFifoQueue), queueUrl);
         }
 
         private void DeleteQueue(SqsQueueName queueName, string queueUrl)
@@ -190,7 +190,7 @@ namespace ServiceStack.Aws.Sqs
                     DeadLetterTargetArn = redriveArn
                 };
 
-            return CreateQueue(GetSqsQueueName(queueName), info.VisibilityTimeout, info.ReceiveWaitTime,
+            return CreateQueue(GetSqsQueueName(queueName, info.IsFifoQueue), info.VisibilityTimeout, info.ReceiveWaitTime,
                                info.DisableBuffering, redrivePolicy, info.IsFifoQueue);
         }
 
@@ -288,11 +288,11 @@ namespace ServiceStack.Aws.Sqs
             return queueDefinition;
         }
 
-        public void PurgeQueue(string queueName)
+        public void PurgeQueue(string queueName, bool isFifoQueue = false)
         {
             try
             {
-                PurgeQueueUrl(GetQueueUrl(queueName));
+                PurgeQueueUrl(GetQueueUrl(queueName, isFifoQueue));
             }
             catch (QueueDoesNotExistException) { }
             catch (AmazonSQSException sqsex)

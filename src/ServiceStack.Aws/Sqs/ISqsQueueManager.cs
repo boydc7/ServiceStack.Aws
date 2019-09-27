@@ -17,13 +17,13 @@ namespace ServiceStack.Aws.Sqs
 
         SqsQueueDefinition CreateQueue(string queueName, int? visibilityTimeoutSeconds = null, int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null, SqsRedrivePolicy redrivePolicy = null, bool isFifoQueue = false);
         SqsQueueDefinition CreateQueue(string queueName, SqsMqWorkerInfo info, string redriveArn = null);
-        void DeleteQueue(string queueName);
+        void DeleteQueue(string queueName, bool isFifoQueue = false);
         SqsQueueDefinition GetOrCreate(string queueName, int? visibilityTimeoutSeconds = null, int? receiveWaitTimeSeconds = null, bool? disasbleBuffering = null, bool isFifoQueue = false);
-        SqsQueueDefinition GetQueueDefinition(string queueName, bool forceRecheck = false);
-        string GetQueueUrl(string queueName, bool forceRecheck = false);
-        void PurgeQueue(string queueName);
+        SqsQueueDefinition GetQueueDefinition(string queueName, bool forceRecheck = false, bool isFifoQueue = false);
+        string GetQueueUrl(string queueName, bool forceRecheck = false, bool isFifoQueue = false);
+        void PurgeQueue(string queueName, bool isFifoQueue = false);
         void PurgeQueues(IEnumerable<string> queueNames);
-        bool QueueExists(string queueName, bool forceRecheck = false);
+        bool QueueExists(string queueName, bool forceRecheck = false, bool isFifoQueue = false);
         int RemoveEmptyTemporaryQueues(long createdBefore);
     }
 }

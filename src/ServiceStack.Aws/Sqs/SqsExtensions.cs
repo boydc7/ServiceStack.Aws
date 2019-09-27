@@ -152,8 +152,6 @@ namespace ServiceStack.Aws.Sqs
             {
                 QueueUrl = queueDefinition.QueueUrl,
                 MessageBody = message.Body.ToJson(),
-                MessageDeduplicationId = messageIdString,
-                MessageGroupId = messageIdString,
                 MessageAttributes = new Dictionary<string, MessageAttributeValue>
                 {
                     { "CreatedDate", message.CreatedDate.AsMessageAttributeValue() },
@@ -173,6 +171,12 @@ namespace ServiceStack.Aws.Sqs
                 to.MessageAttributes["ReplyTo"] = message.ReplyTo.AsMessageAttributeValue();
             if (message.Meta != null)
                 to.MessageAttributes["Meta"] = message.Meta.AsMessageAttributeValue();
+
+            if (queueDefinition.IsFifoQueue)
+            {
+                to.MessageDeduplicationId = messageIdString;
+                to.MessageGroupId = messageIdString;
+            }
 
             return to;
         }

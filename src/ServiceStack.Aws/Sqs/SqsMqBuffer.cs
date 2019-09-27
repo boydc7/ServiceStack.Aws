@@ -173,13 +173,21 @@ namespace ServiceStack.Aws.Sqs
                 if (!sendBuffer.TryDequeue(out var request))
                     yield break;
 
-                yield return new SendMessageBatchRequestEntry
+                var batchEntry = new SendMessageBatchRequestEntry
                 {
                     Id = Guid.NewGuid().ToString("N"),
                     MessageBody = request.MessageBody,
                     DelaySeconds = request.DelaySeconds,
                     MessageAttributes = request.MessageAttributes
                 };
+
+                if (QueueDefinition.IsFifoQueue)
+                {
+                    batchEntry.MessageDeduplicationId = request.MessageDeduplicationId;
+                    batchEntry.MessageGroupId = request.MessageGroupId;
+                }
+
+                yield return batchEntry;
 
                 results++;
             }

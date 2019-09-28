@@ -66,7 +66,7 @@ namespace ServiceStack.Aws.DynamoDb
                 TotalSegments = TotalSegments,                
             }.SetSelect(base.Select);
 
-#if !NETSTANDARD2_0
+#if !NETSTANDARD2_1
             if (ReadWriteTimeoutInternal != null)
                 q.ReadWriteTimeoutInternal = ReadWriteTimeoutInternal;
             if (TimeoutInternal != null)

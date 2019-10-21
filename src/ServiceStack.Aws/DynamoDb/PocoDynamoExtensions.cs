@@ -89,24 +89,24 @@ namespace ServiceStack.Aws.DynamoDb
             return db.ScanAll<T>().ToList();
         }
 
-        public static T GetItem<T>(this IPocoDynamo db, DynamoId id)
+        public static T GetItem<T>(this IPocoDynamo db, DynamoId id, bool? consistentRead = null)
         {
-            return db.GetItem<T>(id.Hash, id.Range);
+            return db.GetItem<T>(id.Hash, id.Range, consistentRead);
         }
 
-        public static List<T> GetItems<T>(this IPocoDynamo db, IEnumerable<int> ids)
+        public static List<T> GetItems<T>(this IPocoDynamo db, IEnumerable<int> ids, bool? consistentRead = null)
         {
-            return db.GetItems<T>(ids.Map(x => (object)x));
+            return db.GetItems<T>(ids.Map(x => (object)x), consistentRead);
         }
 
-        public static List<T> GetItems<T>(this IPocoDynamo db, IEnumerable<long> ids)
+        public static List<T> GetItems<T>(this IPocoDynamo db, IEnumerable<long> ids, bool? consistentRead = null)
         {
-            return db.GetItems<T>(ids.Map(x => (object)x));
+            return db.GetItems<T>(ids.Map(x => (object)x), consistentRead);
         }
 
-        public static List<T> GetItems<T>(this IPocoDynamo db, IEnumerable<string> ids)
+        public static List<T> GetItems<T>(this IPocoDynamo db, IEnumerable<string> ids, bool? consistentRead = null)
         {
-            return db.GetItems<T>(ids.Map(x => (object)x));
+            return db.GetItems<T>(ids.Map(x => (object)x), consistentRead);
         }
 
         public static void DeleteItems<T>(this IPocoDynamo db, IEnumerable<int> ids)

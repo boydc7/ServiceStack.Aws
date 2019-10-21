@@ -302,34 +302,34 @@ namespace ServiceStack.Aws.DynamoDb
             return WaitForTablesToBeDeleted(tableNames);
         }
 
-        public T GetItem<T>(object hash)
+        public T GetItem<T>(object hash, bool? consistentRead = null)
         {
             var table = DynamoMetadata.GetTable<T>();
             var request = new GetItemRequest
             {
                 TableName = table.Name,
                 Key = Converters.ToAttributeKeyValue(this, table.HashKey, hash),
-                ConsistentRead = ConsistentRead,
+                ConsistentRead = consistentRead ?? ConsistentRead,
             };
 
             return ConvertGetItemResponse<T>(request, table);
         }
 
-        public T GetItem<T>(DynamoId id)
+        public T GetItem<T>(DynamoId id, bool? consistentRead = null)
         {
             return id.Range != null
-                ? GetItem<T>(id.Hash, id.Range)
-                : GetItem<T>(id.Hash);
+                ? GetItem<T>(id.Hash, id.Range, consistentRead)
+                : GetItem<T>(id.Hash, consistentRead);
         }
 
-        public T GetItem<T>(object hash, object range)
+        public T GetItem<T>(object hash, object range, bool? consistentRead = null)
         {
             var table = DynamoMetadata.GetTable<T>();
             var request = new GetItemRequest
             {
                 TableName = table.Name,
                 Key = Converters.ToAttributeKeyValue(this, table, hash, range),
-                ConsistentRead = ConsistentRead,
+                ConsistentRead = consistentRead ?? ConsistentRead,
             };
 
             return ConvertGetItemResponse<T>(request, table);
@@ -337,7 +337,7 @@ namespace ServiceStack.Aws.DynamoDb
 
         const int MaxReadBatchSize = 100;
 
-        public List<T> GetItems<T>(IEnumerable<object> hashes)
+        public List<T> GetItems<T>(IEnumerable<object> hashes, bool? consistentRead = null)
         {
             var to = new List<T>();
 
@@ -352,7 +352,7 @@ namespace ServiceStack.Aws.DynamoDb
 
                 var getItems = new KeysAndAttributes
                 {
-                    ConsistentRead = ConsistentRead,
+                    ConsistentRead = consistentRead ?? ConsistentRead,
                 };
                 nextBatch.Each(id =>
                     getItems.Keys.Add(Converters.ToAttributeKeyValue(this, table.HashKey, id)));
@@ -363,7 +363,7 @@ namespace ServiceStack.Aws.DynamoDb
             return to;
         }
 
-        public List<T> GetItems<T>(IEnumerable<DynamoId> ids)
+        public List<T> GetItems<T>(IEnumerable<DynamoId> ids, bool? consistentRead = null)
         {
             var to = new List<T>();
 
@@ -378,7 +378,7 @@ namespace ServiceStack.Aws.DynamoDb
 
                 var getItems = new KeysAndAttributes
                 {
-                    ConsistentRead = ConsistentRead,
+                    ConsistentRead = consistentRead ?? ConsistentRead,
                 };
                 nextBatch.Each(id =>
                     getItems.Keys.Add(Converters.ToAttributeKeyValue(this, table, id)));

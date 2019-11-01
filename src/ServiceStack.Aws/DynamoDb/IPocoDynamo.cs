@@ -83,27 +83,27 @@ namespace ServiceStack.Aws.DynamoDb
         /// <summary>
         /// Gets the POCO instance with the specified hash
         /// </summary>
-        T GetItem<T>(object hash);
+        T GetItem<T>(object hash, bool? consistentRead = null);
 
         /// <summary>
         /// Gets the POCO instance with the specified hash and range value
         /// </summary>
-        T GetItem<T>(DynamoId id);
+        T GetItem<T>(DynamoId id, bool? consistentRead = null);
 
         /// <summary>
         /// Gets the POCO instance with the specified hash and range value
         /// </summary>
-        T GetItem<T>(object hash, object range);
+        T GetItem<T>(object hash, object range, bool? consistentRead = null);
 
         /// <summary>
         /// Calls 'BatchGetItem' in the min number of batch requests to return POCOs with the specified hashes 
         /// </summary>
-        List<T> GetItems<T>(IEnumerable<object> hashes);
+        List<T> GetItems<T>(IEnumerable<object> hashes, bool? consistentRead = null);
 
         /// <summary>
         /// Calls 'BatchGetItem' in the min number of batch requests to return POCOs with the specified hash and ranges 
         /// </summary>
-        List<T> GetItems<T>(IEnumerable<DynamoId> ids);
+        List<T> GetItems<T>(IEnumerable<DynamoId> ids, bool? consistentRead = null);
 
         /// <summary>
         /// Calls 'PutItem' to store instance in DynamoDB

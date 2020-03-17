@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Amazon.SQS.Model;
 
 namespace ServiceStack.Aws.Sqs

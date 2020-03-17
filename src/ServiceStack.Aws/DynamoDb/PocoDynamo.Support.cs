@@ -9,7 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
-using ServiceStack.Aws.Support;
 using ServiceStack.Text;
 
 namespace ServiceStack.Aws.DynamoDb
@@ -21,21 +20,12 @@ namespace ServiceStack.Aws.DynamoDb
         //Error Handling: http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/ErrorHandling.html
         public void Exec(Action fn, Type[] rethrowExceptions = null, HashSet<string> retryOnErrorCodes = null)
         {
-            Exec(() => {
-                fn();
-                return true;
-            }, rethrowExceptions, retryOnErrorCodes);
-        }
+            Exec(() =>
+                 {
+                     fn();
 
-        public Task ExecAsync(Func<Task> fn, Type[] rethrowExceptions = null, HashSet<string> retryOnErrorCodes = null)
-        {
-            return Exec(fn, rethrowExceptions, retryOnErrorCodes);
-        }
-
-
-        public Task<T> ExecAsync<T>(Func<Task<T>> fn, Type[] rethrowExceptions = null, HashSet<string> retryOnErrorCodes = null)
-        {
-            return Exec(fn, rethrowExceptions, retryOnErrorCodes);
+                     return true;
+                 }, rethrowExceptions, retryOnErrorCodes);
         }
 
         public T Exec<T>(Func<T> fn, Type[] rethrowExceptions = null, HashSet<string> retryOnErrorCodes = null)
@@ -45,16 +35,19 @@ namespace ServiceStack.Aws.DynamoDb
             var firstAttempt = DateTime.UtcNow;
 
             if (retryOnErrorCodes == null)
+            {
                 retryOnErrorCodes = RetryOnErrorCodes;
+            }
 
-            while (DateTime.UtcNow - firstAttempt < MaxRetryOnExceptionTimeout)
+            while ((DateTime.UtcNow - firstAttempt) < MaxRetryOnExceptionTimeout)
             {
                 i++;
+
                 try
                 {
                     return fn();
                 }
-                catch (Exception outerEx)
+                catch(Exception outerEx)
                 {
                     var ex = outerEx.UnwrapIfSingleException();
 
@@ -67,7 +60,9 @@ namespace ServiceStack.Aws.DynamoDb
                             if (ex.GetType().IsAssignableFrom(rethrowEx))
                             {
                                 if (ex != outerEx)
+                                {
                                     throw ex;
+                                }
 
                                 throw;
                             }
@@ -75,12 +70,17 @@ namespace ServiceStack.Aws.DynamoDb
                     }
 
                     if (originalEx == null)
+                    {
                         originalEx = ex;
+                    }
 
                     var amazonEx = ex as AmazonDynamoDBException;
+
                     if (amazonEx?.StatusCode == HttpStatusCode.BadRequest &&
                         !retryOnErrorCodes.Contains(amazonEx.ErrorCode))
+                    {
                         throw;
+                    }
 
                     i.SleepBackOffMultiplier();
                 }
@@ -94,34 +94,45 @@ namespace ServiceStack.Aws.DynamoDb
             var pendingTables = new List<string>(tableNames);
 
             if (pendingTables.Count == 0)
+            {
                 return true;
+            }
 
             var startAt = DateTime.UtcNow;
+
             do
             {
                 try
                 {
                     var responses = pendingTables.Map(x =>
-                        Exec(() => DynamoDb.DescribeTable(new DescribeTableRequest(x))));
+                                                          Exec(() => DynamoDb.DescribeTable(new DescribeTableRequest(x))));
 
                     foreach (var response in responses)
                     {
                         if (response.Table.TableStatus == DynamoStatus.Active)
+                        {
                             pendingTables.Remove(response.Table.TableName);
+                        }
                     }
 
                     if (Log.IsDebugEnabled)
+                    {
                         Log.Debug($"Tables Pending: {pendingTables.ToJsv()}");
+                    }
 
                     if (pendingTables.Count == 0)
+                    {
                         return true;
+                    }
 
-                    if (timeout != null && DateTime.UtcNow - startAt > timeout.Value)
+                    if (timeout != null && (DateTime.UtcNow - startAt) > timeout.Value)
+                    {
                         return false;
+                    }
 
                     Thread.Sleep(PollTableStatus);
                 }
-                catch (ResourceNotFoundException)
+                catch(ResourceNotFoundException)
                 {
                     // DescribeTable is eventually consistent. So you might
                     // get resource not found. So we handle the potential exception.
@@ -134,26 +145,48 @@ namespace ServiceStack.Aws.DynamoDb
             var pendingTables = new List<string>(tableNames);
 
             if (pendingTables.Count == 0)
+            {
                 return true;
+            }
 
             var startAt = DateTime.UtcNow;
+
             do
             {
                 var existingTables = GetTableNames().ToList();
                 pendingTables.RemoveAll(x => !existingTables.Contains(x));
 
                 if (Log.IsDebugEnabled)
+                {
                     Log.DebugFormat("Waiting for Tables to be removed: {0}", pendingTables.Dump());
+                }
 
                 if (pendingTables.Count == 0)
+                {
                     return true;
+                }
 
-                if (timeout != null && DateTime.UtcNow - startAt > timeout.Value)
+                if (timeout != null && (DateTime.UtcNow - startAt) > timeout.Value)
+                {
                     return false;
+                }
 
                 Thread.Sleep(PollTableStatus);
-
             } while (true);
+        }
+
+        private async Task<T> ConvertGetItemResponseAsync<T>(GetItemRequest request, DynamoMetadataType table)
+        {
+            var response = await ExecAsync(() => DynamoDb.GetItemAsync(request), rethrowExceptions: throwNotFoundExceptions).ConfigureAwait(false);
+
+            if (!response.IsItemSet)
+            {
+                return default;
+            }
+
+            var attributeValues = response.Item;
+
+            return Converters.FromAttributeValues<T>(table, attributeValues);
         }
 
         private T ConvertGetItemResponse<T>(GetItemRequest request, DynamoMetadataType table)
@@ -161,34 +194,98 @@ namespace ServiceStack.Aws.DynamoDb
             var response = Exec(() => DynamoDb.GetItem(request), rethrowExceptions: throwNotFoundExceptions);
 
             if (!response.IsItemSet)
-                return default(T);
+            {
+                return default;
+            }
+
             var attributeValues = response.Item;
 
             return Converters.FromAttributeValues<T>(table, attributeValues);
+        }
+
+        private async IAsyncEnumerable<T> ConvertBatchGetItemResponseAsync<T>(DynamoMetadataType table, KeysAndAttributes getItems)
+        {
+            var request = new BatchGetItemRequest(new Dictionary<string, KeysAndAttributes>
+                                                  {
+                                                      { table.Name, getItems }
+                                                  });
+
+            var response = await ExecAsync(() => DynamoDb.BatchGetItemAsync(request)).ConfigureAwait(false);
+
+            if (response.Responses.TryGetValue(table.Name, out var results))
+            {
+                foreach (var result in results)
+                {
+                    yield return Converters.FromAttributeValues<T>(table, result);
+                }
+            }
+
+            if (response.UnprocessedKeys.IsNullOrEmpty())
+            {
+                yield break;
+            }
+
+            var i = 0;
+
+            while (response.UnprocessedKeys.Count > 0)
+            {
+                response = await ExecAsync(() => DynamoDb.BatchGetItemAsync(new BatchGetItemRequest(response.UnprocessedKeys))).ConfigureAwait(false);
+
+                if (response.Responses.TryGetValue(table.Name, out results))
+                {
+                    foreach (var result in results)
+                    {
+                        yield return Converters.FromAttributeValues<T>(table, result);
+                    }
+                }
+
+                if (response.UnprocessedKeys.Count > 0)
+                {
+                    i++;
+
+                    await i.SleepBackOffMultiplierAsync().ConfigureAwait(false);
+                }
+            }
         }
 
         private List<T> ConvertBatchGetItemResponse<T>(DynamoMetadataType table, KeysAndAttributes getItems)
         {
             var to = new List<T>();
 
-            var request = new BatchGetItemRequest(new Dictionary<string, KeysAndAttributes> {
-                {table.Name, getItems}
-            });
+            var request = new BatchGetItemRequest(new Dictionary<string, KeysAndAttributes>
+                                                  {
+                                                      { table.Name, getItems }
+                                                  });
 
             var response = Exec(() => DynamoDb.BatchGetItem(request));
 
             if (response.Responses.TryGetValue(table.Name, out var results))
+            {
                 results.Each(x => to.Add(Converters.FromAttributeValues<T>(table, x)));
+            }
+
+            if (response.UnprocessedKeys.IsNullOrEmpty())
+            {
+                return to;
+            }
 
             var i = 0;
+
             while (response.UnprocessedKeys.Count > 0)
             {
                 response = Exec(() => DynamoDb.BatchGetItem(new BatchGetItemRequest(response.UnprocessedKeys)));
+
                 if (response.Responses.TryGetValue(table.Name, out results))
+                {
                     results.Each(x => to.Add(Converters.FromAttributeValues<T>(table, x)));
+                }
 
                 if (response.UnprocessedKeys.Count > 0)
+                {
+                    i++;
+
                     i.SleepBackOffMultiplier();
+                }
             }
 
             return to;
@@ -197,20 +294,87 @@ namespace ServiceStack.Aws.DynamoDb
         private void ExecBatchWriteItemResponse<T>(DynamoMetadataType table, List<WriteRequest> deleteItems)
         {
             var request = new BatchWriteItemRequest(new Dictionary<string, List<WriteRequest>>
-            {
-                {table.Name, deleteItems}
-            });
+                                                    {
+                                                        { table.Name, deleteItems }
+                                                    });
 
             var response = Exec(() => DynamoDb.BatchWriteItem(request));
 
+            if (response.UnprocessedItems.Count <= 0)
+            {
+                return;
+            }
+
             var i = 0;
+
             while (response.UnprocessedItems.Count > 0)
             {
                 response = Exec(() => DynamoDb.BatchWriteItem(new BatchWriteItemRequest(response.UnprocessedItems)));
 
                 if (response.UnprocessedItems.Count > 0)
+                {
+                    i++;
+
                     i.SleepBackOffMultiplier();
+                }
             }
+        }
+
+        private async Task ExecBatchWriteItemResponseAsync<T>(DynamoMetadataType table, List<WriteRequest> writeItems)
+        {
+            var request = new BatchWriteItemRequest(new Dictionary<string, List<WriteRequest>>
+                                                    {
+                                                        { table.Name, writeItems }
+                                                    });
+
+            var response = await ExecAsync(() => DynamoDb.BatchWriteItemAsync(request)).ConfigureAwait(false);
+
+            if (response.UnprocessedItems.Count <= 0)
+            {
+                return;
+            }
+
+            var i = 0;
+
+            while (response.UnprocessedItems.Count > 0)
+            {
+                response = await ExecAsync(() => DynamoDb.BatchWriteItemAsync(new BatchWriteItemRequest(response.UnprocessedItems))).ConfigureAwait(false);
+
+                if (response.UnprocessedItems.Count > 0)
+                {
+                    i++;
+
+                    await i.SleepBackOffMultiplierAsync();
+                }
+            }
+        }
+
+        private static IEnumerable<IEnumerable<T>> ToLazyBatchesOf<T>(IEnumerable<T> source, int batchSize)
+        {
+            if (source == null)
+            {
+                yield break;
+            }
+
+            using(var sourceEnumerator = source.GetEnumerator())
+            {
+                while (sourceEnumerator.MoveNext())
+                {
+                    yield return TakeFromEnumeratorInternal(sourceEnumerator, batchSize);
+                }
+            }
+        }
+
+        private static IEnumerable<T> TakeFromEnumeratorInternal<T>(IEnumerator<T> source, int take)
+        {
+            var yielded = 0;
+
+            do
+            {
+                yield return source.Current;
+
+                yielded++;
+            } while (yielded < take && source.MoveNext());
         }
     }
 }

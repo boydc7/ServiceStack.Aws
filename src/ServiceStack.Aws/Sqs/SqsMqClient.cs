@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Amazon.SQS.Model;
 using ServiceStack.DataAnnotations;
 using ServiceStack.Messaging;
@@ -24,16 +25,12 @@ namespace ServiceStack.Aws.Sqs
         }
 
         public IMessage<T> Get<T>(string queueName, TimeSpan? timeOut = null)
-        {
-            return GetMessage<T>(queueName, timeOut.HasValue
-                ? (int)Math.Round(timeOut.Value.TotalSeconds, MidpointRounding.AwayFromZero)
-                : -1);
-        }
+            => GetMessage<T>(queueName, timeOut.HasValue
+                                            ? (int)Math.Round(timeOut.Value.TotalSeconds, MidpointRounding.AwayFromZero)
+                                            : -1);
 
         public IMessage<T> GetAsync<T>(string queueName)
-        {
-            return GetMessage<T>(queueName, waitSeconds: 0);
-        }
+            => GetMessage<T>(queueName, waitSeconds: 0);
 
         private static readonly List<string> AllMessageProperties = new List<string> { "All" };
 
@@ -54,15 +51,16 @@ namespace ServiceStack.Aws.Sqs
             do
             {
                 var sqsMessage = sqsBuffer.Receive(ApplyFilter(new ReceiveMessageRequest
-                {
-                    MaxNumberOfMessages = queueDefinition.ReceiveBufferSize,
-                    QueueUrl = queueDefinition.QueueUrl,
-                    VisibilityTimeout = queueDefinition.VisibilityTimeout,
-                    WaitTimeSeconds = receiveWaitTime,
-                    MessageAttributeNames = AllMessageProperties
-                }));
+                                                               {
+                                                                   MaxNumberOfMessages = queueDefinition.ReceiveBufferSize,
+                                                                   QueueUrl = queueDefinition.QueueUrl,
+                                                                   VisibilityTimeout = queueDefinition.VisibilityTimeout,
+                                                                   WaitTimeSeconds = receiveWaitTime,
+                                                                   MessageAttributeNames = AllMessageProperties
+                                                               }));
 
                 var message = ApplyFilter(sqsMessage, sqsMessage.FromSqsMessage<T>(queueDefinition.QueueName));
+
                 if (message != null)
                     return message;
 
@@ -162,10 +160,7 @@ namespace ServiceStack.Aws.Sqs
             }
         }
 
-        public IMessage<T> CreateMessage<T>(object mqResponse)
-        {
-            return (IMessage<T>)mqResponse;
-        }
+        public IMessage<T> CreateMessage<T>(object mqResponse) => (IMessage<T>)mqResponse;
 
         public string GetTempQueueName()
         {   // NOTE: Purposely not creating DLQ queues for all these temps if they get used, they'll get

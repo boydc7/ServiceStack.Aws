@@ -19,10 +19,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.Core" Version="3.3.104.1" />
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.104.3" />
-    <PackageReference Include="AWSSDK.S3" Version="3.3.109.1" />
-    <PackageReference Include="AWSSDK.SQS" Version="3.3.102.40" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.104.36" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.105.10" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.110.34" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.3.102.75" />
     <PackageReference Include="System.ServiceModel.Primitives" Version="4.7.0" />
   </ItemGroup>
 

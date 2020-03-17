@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using ServiceStack.Aws.Support;
@@ -65,6 +66,18 @@ namespace ServiceStack.Aws.Sqs
             request.MaxNumberOfMessages = 1;
 
             var response = SqsClient.ReceiveMessage(request);
+            return response?.Messages.SingleOrDefault();
+        }
+
+        public async Task<Message> ReceiveAsync(ReceiveMessageRequest request)
+        {
+            if (request == null)
+                return null;
+
+            request.MaxNumberOfMessages = 1;
+
+            var response = await SqsClient.ReceiveMessageAsync(request).ConfigureAwait(false);
+
             return response?.Messages.SingleOrDefault();
         }
 

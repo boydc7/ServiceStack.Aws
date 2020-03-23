@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 
@@ -237,9 +238,19 @@ namespace ServiceStack.Aws.DynamoDb
                 .Where(Table.HasField));
         }
 
+        public IAsyncEnumerable<IEnumerable<T>> ExecAsync()
+        {
+            return Db.QueryAsync<T>(this);
+        }
+
         public IEnumerable<T> Exec()
         {
             return Db.Query(this);
+        }
+
+        public IAsyncEnumerable<IEnumerable<T>> ExecAsync(int limit)
+        {
+            return Db.QueryAsync(this, limit:limit);
         }
 
         public List<T> Exec(int limit)
@@ -247,9 +258,19 @@ namespace ServiceStack.Aws.DynamoDb
             return Db.Query(this, limit:limit);
         }
 
+        public IAsyncEnumerable<IEnumerable<Into>> ExecIntoAsync<Into>()
+        {
+            return Db.QueryAsync<Into>(this.Projection<Into>());
+        }
+
         public IEnumerable<Into> ExecInto<Into>()
         {
             return Db.Query<Into>(this.Projection<Into>());
+        }
+
+        public IAsyncEnumerable<IEnumerable<Into>> ExecAsync<Into>(int limit)
+        {
+            return Db.QueryAsync<Into>(this.Projection<Into>(), limit: limit);
         }
 
         public List<Into> Exec<Into>(int limit)
@@ -257,15 +278,29 @@ namespace ServiceStack.Aws.DynamoDb
             return Db.Query<Into>(this.Projection<Into>(), limit:limit);
         }
 
+        public async IAsyncEnumerable<IEnumerable<TKey>> ExecColumnAsync<TKey>(Expression<Func<T, TKey>> fields)
+        {
+            var q = new PocoDynamoExpression(typeof(T)).Parse(fields);
+            var field = q.ReferencedFields[0];
+            this.ProjectionExpression = field;
+            var dField = Table.GetField(field);
+
+            await foreach (var attrValues in Db.QueryAsync<T>(this).ConfigureAwait(false))
+            {
+                yield return attrValues.Select(v => (TKey)dField.GetValue(v));
+            }
+        }
+
         public IEnumerable<TKey> ExecColumn<TKey>(Expression<Func<T, TKey>> fields)
         {
             var q = new PocoDynamoExpression(typeof(T)).Parse(fields);
             var field = q.ReferencedFields[0];
             this.ProjectionExpression = field;
+            var dField = Table.GetField(field);
 
             foreach (var attrValue in Db.Query(this))
             {
-                object value = Table.GetField(field).GetValue(attrValue);
+                object value = dField.GetValue(attrValue);
                 yield return (TKey)value;
             }
         }

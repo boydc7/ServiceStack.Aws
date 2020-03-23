@@ -80,12 +80,20 @@ namespace ServiceStack.Aws.DynamoDb
                 .ToList();
         }
 
+        public static IEnumerable<T> ConvertAllLazy<T>(this ScanResponse response)
+            => response.Items
+                       .Select(values => DynamoMetadata.GetType<T>().ConvertTo<T>(values));
+
         public static List<T> ConvertAll<T>(this QueryResponse response)
         {
             return response.Items
                 .Select(values => DynamoMetadata.GetType<T>().ConvertTo<T>(values))
                 .ToList();
         }
+
+        public static IEnumerable<T> ConvertAllLazy<T>(this QueryResponse response)
+            => response.Items
+                       .Select(values => DynamoMetadata.GetType<T>().ConvertTo<T>(values));
 
         public static List<KeySchemaElement> ToKeySchemas(this DynamoIndex index)
         {

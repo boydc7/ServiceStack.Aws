@@ -14,15 +14,6 @@ namespace ServiceStack.Aws.DynamoDb
 {
     public partial class PocoDynamo
     {
-        public Task ExecAsync(Func<Task> fn, Type[] rethrowExceptions = null, HashSet<string> retryOnErrorCodes = null)
-            => ExecAsync(async () =>
-                         {
-                             await fn();
-
-                             return true;
-                         },
-                         rethrowExceptions, retryOnErrorCodes);
-
         public async Task<T> ExecAsync<T>(Func<Task<T>> fn, Type[] rethrowExceptions = null, HashSet<string> retryOnErrorCodes = null)
         {
             var i = 0;
@@ -230,7 +221,7 @@ namespace ServiceStack.Aws.DynamoDb
             return result;
         }
 
-        public async IAsyncEnumerable<T> GetItemsAsync<T>(IEnumerable<object> hashes, bool? consistentRead = null)
+        public async IAsyncEnumerable<IEnumerable<T>> GetItemsAsync<T>(IEnumerable<object> hashes, bool? consistentRead = null)
         {
             var table = DynamoMetadata.GetTable<T>();
 
@@ -250,7 +241,7 @@ namespace ServiceStack.Aws.DynamoDb
             }
         }
 
-        public async IAsyncEnumerable<T> GetItemsAsync<T>(IEnumerable<DynamoId> ids, bool? consistentRead = null)
+        public async IAsyncEnumerable<IEnumerable<T>> GetItemsAsync<T>(IEnumerable<DynamoId> ids, bool? consistentRead = null)
         {
             var table = DynamoMetadata.GetTable<T>();
 
@@ -474,7 +465,7 @@ namespace ServiceStack.Aws.DynamoDb
             }
         }
 
-        public async IAsyncEnumerable<T> ScanAsync<T>(ScanRequest request, Func<ScanResponse, IEnumerable<T>> converter)
+        public async IAsyncEnumerable<IEnumerable<T>> ScanAsync<T>(ScanRequest request, Func<ScanResponse, IEnumerable<T>> converter)
         {
             ScanResponse response = null;
 
@@ -489,14 +480,11 @@ namespace ServiceStack.Aws.DynamoDb
 
                 var results = converter(response);
 
-                foreach (var result in results)
-                {
-                    yield return result;
-                }
+                yield return results;
             } while (!response.LastEvaluatedKey.IsEmpty());
         }
 
-        public async IAsyncEnumerable<T> ScanAsync<T>(ScanExpression<T> request, int limit)
+        public async IAsyncEnumerable<IEnumerable<T>> ScanAsync<T>(ScanExpression<T> request, int limit)
         {
             if (request.Limit == default)
             {
@@ -515,26 +503,21 @@ namespace ServiceStack.Aws.DynamoDb
 
                 response = await ExecAsync(() => DynamoDb.ScanAsync(request)).ConfigureAwait(false);
 
-                var results = response.ConvertAll<T>();
+                yield return response.ConvertAllLazy<T>();
 
-                foreach (var result in results)
+                count += response.Items?.Count ?? 0;
+
+                if (count >= limit)
                 {
-                    yield return result;
-
-                    count++;
-
-                    if (count >= limit)
-                    {
-                        break;
-                    }
+                    break;
                 }
             } while (!response.LastEvaluatedKey.IsEmpty() && count < limit);
         }
 
-        public IAsyncEnumerable<T> ScanAsync<T>(ScanExpression<T> request)
-            => ScanAsync(request, r => r.ConvertAll<T>());
+        public IAsyncEnumerable<IEnumerable<T>> ScanAsync<T>(ScanExpression<T> request)
+            => ScanAsync(request, r => r.ConvertAllLazy<T>());
 
-        public async IAsyncEnumerable<T> ScanAsync<T>(ScanRequest request, int limit)
+        public async IAsyncEnumerable<IEnumerable<T>> ScanAsync<T>(ScanRequest request, int limit)
         {
             if (request.Limit == default)
             {
@@ -553,41 +536,31 @@ namespace ServiceStack.Aws.DynamoDb
 
                 response = await ExecAsync(() => DynamoDb.ScanAsync(request)).ConfigureAwait(false);
 
-                var results = response.ConvertAll<T>();
+                yield return response.ConvertAllLazy<T>();
 
-                foreach (var result in results)
-                {
-                    yield return result;
-
-                    count++;
+                count += response.Items?.Count ?? 0;
 
                     if (count >= limit)
                     {
                         break;
                     }
-                }
             } while (!response.LastEvaluatedKey.IsEmpty() && count < limit);
         }
 
-        public IAsyncEnumerable<T> ScanAsync<T>(ScanRequest request)
-            => ScanAsync(request, r => r.ConvertAll<T>());
+        public IAsyncEnumerable<IEnumerable<T>> ScanAsync<T>(ScanRequest request)
+            => ScanAsync(request, r => r.ConvertAllLazy<T>());
 
-        public IAsyncEnumerable<T> QueryAsync<T>(QueryExpression<T> request)
-            => QueryAsync(request, r => r.ConvertAll<T>());
+        public IAsyncEnumerable<IEnumerable<T>> QueryAsync<T>(QueryExpression<T> request)
+            => QueryAsync(request, r => r.ConvertAllLazy<T>());
 
-        public IAsyncEnumerable<T> QueryAsync<T>(QueryExpression<T> request, int limit)
+        public IAsyncEnumerable<IEnumerable<T>> QueryAsync<T>(QueryExpression<T> request, int limit)
             => QueryAsync<T>((QueryRequest)request, limit);
 
-        public IAsyncEnumerable<T> QueryAsync<T>(QueryRequest request)
-            => QueryAsync(request, r => r.ConvertAll<T>());
+        public IAsyncEnumerable<IEnumerable<T>> QueryAsync<T>(QueryRequest request)
+            => QueryAsync(request, r => r.ConvertAllLazy<T>());
 
-        public async IAsyncEnumerable<T> QueryAsync<T>(QueryRequest request, int limit)
+        public async IAsyncEnumerable<IEnumerable<T>> QueryAsync<T>(QueryRequest request, int limit)
         {
-            if (request.Limit == default)
-            {
-                request.Limit = limit;
-            }
-
             QueryResponse response = null;
             var count = 0;
 
@@ -600,23 +573,18 @@ namespace ServiceStack.Aws.DynamoDb
 
                 response = await ExecAsync(() => DynamoDb.QueryAsync(request)).ConfigureAwait(false);
 
-                var results = response.ConvertAll<T>();
+                yield return response.ConvertAllLazy<T>();
 
-                foreach (var result in results)
+                count += response.Items?.Count ?? 0;
+
+                if (count >= limit)
                 {
-                    yield return result;
-
-                    count++;
-
-                    if (count >= limit)
-                    {
-                        break;
-                    }
+                    break;
                 }
             } while (!response.LastEvaluatedKey.IsEmpty() && count < limit);
         }
 
-        public async IAsyncEnumerable<T> QueryAsync<T>(QueryRequest request, Func<QueryResponse, IEnumerable<T>> converter)
+        public async IAsyncEnumerable<IEnumerable<T>> QueryAsync<T>(QueryRequest request, Func<QueryResponse, IEnumerable<T>> converter)
         {
             QueryResponse response = null;
 
@@ -629,13 +597,39 @@ namespace ServiceStack.Aws.DynamoDb
 
                 response = await ExecAsync(() => DynamoDb.QueryAsync(request)).ConfigureAwait(false);
 
-                var results = converter(response);
-
-                foreach (var result in results)
-                {
-                    yield return result;
-                }
+                yield return converter(response);
             } while (!response.LastEvaluatedKey.IsEmpty());
+        }
+
+        public async Task<long> IncrementAsync<T>(object hash, string fieldName, long amount = 1)
+        {
+            var type = DynamoMetadata.GetType<T>();
+
+            var request = new UpdateItemRequest
+                          {
+                              TableName = type.Name,
+                              Key = Converters.ToAttributeKeyValue(this, type.HashKey, hash),
+                              AttributeUpdates = new Dictionary<string, AttributeValueUpdate>
+                                                 {
+                                                     {
+                                                         fieldName, new AttributeValueUpdate
+                                                                    {
+                                                                        Action = AttributeAction.ADD,
+                                                                        Value = new AttributeValue
+                                                                                {
+                                                                                    N = amount.ToString()
+                                                                                }
+                                                                    }
+                                                     }
+                                                 },
+                              ReturnValues = ReturnValue.ALL_NEW,
+                          };
+
+            var response = await DynamoDb.UpdateItemAsync(request);
+
+            return response.Attributes.Count > 0
+                       ? Convert.ToInt64(response.Attributes[fieldName].N)
+                       : 0;
         }
     }
 }

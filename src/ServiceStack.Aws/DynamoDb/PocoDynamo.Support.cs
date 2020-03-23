@@ -203,7 +203,7 @@ namespace ServiceStack.Aws.DynamoDb
             return Converters.FromAttributeValues<T>(table, attributeValues);
         }
 
-        private async IAsyncEnumerable<T> ConvertBatchGetItemResponseAsync<T>(DynamoMetadataType table, KeysAndAttributes getItems)
+        private async IAsyncEnumerable<IEnumerable<T>> ConvertBatchGetItemResponseAsync<T>(DynamoMetadataType table, KeysAndAttributes getItems)
         {
             var request = new BatchGetItemRequest(new Dictionary<string, KeysAndAttributes>
                                                   {
@@ -214,10 +214,7 @@ namespace ServiceStack.Aws.DynamoDb
 
             if (response.Responses.TryGetValue(table.Name, out var results))
             {
-                foreach (var result in results)
-                {
-                    yield return Converters.FromAttributeValues<T>(table, result);
-                }
+                yield return results.Select(r => Converters.FromAttributeValues<T>(table, r));
             }
 
             if (response.UnprocessedKeys.IsNullOrEmpty())
@@ -233,10 +230,7 @@ namespace ServiceStack.Aws.DynamoDb
 
                 if (response.Responses.TryGetValue(table.Name, out results))
                 {
-                    foreach (var result in results)
-                    {
-                        yield return Converters.FromAttributeValues<T>(table, result);
-                    }
+                    yield return results.Select(r => Converters.FromAttributeValues<T>(table, r));
                 }
 
                 if (response.UnprocessedKeys.Count > 0)

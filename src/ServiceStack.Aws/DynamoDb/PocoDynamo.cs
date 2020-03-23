@@ -404,7 +404,7 @@ namespace ServiceStack.Aws.DynamoDb
                 }
             };
 
-            return Query(request, r => r.ConvertAll<T>());
+            return Query(request, r => r.ConvertAllLazy<T>());
         }
 
         public void DeleteRelatedItems<T>(object hash, IEnumerable<object> ranges)
@@ -721,7 +721,7 @@ namespace ServiceStack.Aws.DynamoDb
                 TableName = type.Name,
             };
 
-            return Scan(request, r => r.ConvertAll<T>());
+            return Scan(request, r => r.ConvertAllLazy<T>());
         }
 
         public IEnumerable<T> Scan<T>(ScanRequest request, Func<ScanResponse, IEnumerable<T>> converter)
@@ -789,7 +789,7 @@ namespace ServiceStack.Aws.DynamoDb
                     request.ExclusiveStartKey = response.LastEvaluatedKey;
 
                 response = Exec(() => DynamoDb.Scan(request));
-                var results = response.ConvertAll<T>();
+                var results = response.ConvertAllLazy<T>();
 
                 foreach (var result in results)
                 {
@@ -806,7 +806,7 @@ namespace ServiceStack.Aws.DynamoDb
 
         public IEnumerable<T> Scan<T>(ScanExpression<T> request)
         {
-            return Scan(request, r => r.ConvertAll<T>());
+            return Scan(request, r => r.ConvertAllLazy<T>());
         }
 
         public List<T> Scan<T>(ScanRequest request, int limit)
@@ -823,7 +823,7 @@ namespace ServiceStack.Aws.DynamoDb
                     request.ExclusiveStartKey = response.LastEvaluatedKey;
 
                 response = Exec(() => DynamoDb.Scan(request));
-                var results = response.ConvertAll<T>();
+                var results = response.ConvertAllLazy<T>();
 
                 foreach (var result in results)
                 {
@@ -840,7 +840,7 @@ namespace ServiceStack.Aws.DynamoDb
 
         public IEnumerable<T> Scan<T>(ScanRequest request)
         {
-            return Scan(request, r => r.ConvertAll<T>());
+            return Scan(request, r => r.ConvertAllLazy<T>());
         }
 
         public long ScanItemCount<T>()
@@ -896,7 +896,7 @@ namespace ServiceStack.Aws.DynamoDb
 
         public IEnumerable<T> Query<T>(QueryExpression<T> request)
         {
-            return Query(request, r => r.ConvertAll<T>());
+            return Query(request, r => r.ConvertAllLazy<T>());
         }
 
         public List<T> Query<T>(QueryExpression<T> request, int limit)
@@ -906,7 +906,7 @@ namespace ServiceStack.Aws.DynamoDb
 
         public IEnumerable<T> Query<T>(QueryRequest request)
         {
-            return Query(request, r => r.ConvertAll<T>());
+            return Query(request, r => r.ConvertAllLazy<T>());
         }
 
         public List<T> Query<T>(QueryRequest request, int limit)
@@ -923,7 +923,7 @@ namespace ServiceStack.Aws.DynamoDb
                     request.ExclusiveStartKey = response.LastEvaluatedKey;
 
                 response = Exec(() => DynamoDb.Query(request));
-                var results = response.ConvertAll<T>();
+                var results = response.ConvertAllLazy<T>();
 
                 foreach (var result in results)
                 {

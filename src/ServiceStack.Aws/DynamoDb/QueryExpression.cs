@@ -238,7 +238,7 @@ namespace ServiceStack.Aws.DynamoDb
                 .Where(Table.HasField));
         }
 
-        public IAsyncEnumerable<IEnumerable<T>> ExecAsync()
+        public IAsyncEnumerable<T> ExecAsync()
         {
             return Db.QueryAsync<T>(this);
         }
@@ -248,7 +248,7 @@ namespace ServiceStack.Aws.DynamoDb
             return Db.Query(this);
         }
 
-        public IAsyncEnumerable<IEnumerable<T>> ExecAsync(int limit)
+        public IAsyncEnumerable<T> ExecAsync(int limit)
         {
             return Db.QueryAsync(this, limit:limit);
         }
@@ -258,7 +258,7 @@ namespace ServiceStack.Aws.DynamoDb
             return Db.Query(this, limit:limit);
         }
 
-        public IAsyncEnumerable<IEnumerable<Into>> ExecIntoAsync<Into>()
+        public IAsyncEnumerable<Into> ExecIntoAsync<Into>()
         {
             return Db.QueryAsync<Into>(this.Projection<Into>());
         }
@@ -268,7 +268,7 @@ namespace ServiceStack.Aws.DynamoDb
             return Db.Query<Into>(this.Projection<Into>());
         }
 
-        public IAsyncEnumerable<IEnumerable<Into>> ExecAsync<Into>(int limit)
+        public IAsyncEnumerable<Into> ExecAsync<Into>(int limit)
         {
             return Db.QueryAsync<Into>(this.Projection<Into>(), limit: limit);
         }
@@ -278,16 +278,16 @@ namespace ServiceStack.Aws.DynamoDb
             return Db.Query<Into>(this.Projection<Into>(), limit:limit);
         }
 
-        public async IAsyncEnumerable<IEnumerable<TKey>> ExecColumnAsync<TKey>(Expression<Func<T, TKey>> fields)
+        public async IAsyncEnumerable<TKey> ExecColumnAsync<TKey>(Expression<Func<T, TKey>> fields)
         {
             var q = new PocoDynamoExpression(typeof(T)).Parse(fields);
             var field = q.ReferencedFields[0];
             this.ProjectionExpression = field;
             var dField = Table.GetField(field);
 
-            await foreach (var attrValues in Db.QueryAsync<T>(this).ConfigureAwait(false))
+            await foreach (var attrValue in Db.QueryAsync<T>(this).ConfigureAwait(false))
             {
-                yield return attrValues.Select(v => (TKey)dField.GetValue(v));
+                yield return (TKey)dField.GetValue(attrValue);
             }
         }
 

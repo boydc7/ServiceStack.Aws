@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using ServiceStack.Text;
 
 namespace ServiceStack.Aws.DynamoDb
@@ -104,6 +105,24 @@ namespace ServiceStack.Aws.DynamoDb
             return results.ToList();
         }
 
+        public virtual IAsyncEnumerable<T> GetResultsAsync(ScanExpression scanExpr, int? skip = null, int? take = null)
+        {
+            var results = db.ScanAsync(scanExpr, r =>
+            {
+                if (total == null)
+                    total = r.Count;
+                return r.ConvertAll<T>();
+            });
+
+            if (skip != null)
+                results = results.Skip(skip.Value);
+
+            if (take != null)
+                results = results.Take(take.Value);
+
+            return results;
+        }
+
         public virtual IEnumerable<T> GetResults(QueryExpression queryExpr, int? skip = null, int? take = null)
         {
             var results = db.Query(queryExpr, r =>
@@ -122,6 +141,24 @@ namespace ServiceStack.Aws.DynamoDb
             return results.ToList();
         }
 
+        public IAsyncEnumerable<T> GetResultsAsync(QueryExpression queryExpr, int? skip = null, int? take = null)
+        {
+            var results = db.QueryAsync(queryExpr, r =>
+            {
+                if (total == null)
+                    total = r.Count;
+                return r.ConvertAll<T>();
+            });
+
+            if (skip != null)
+                results = results.Skip(skip.Value);
+
+            if (take != null)
+                results = results.Take(take.Value);
+
+            return results;
+        }
+
         public override IEnumerable<T> GetDataSource(IDataQuery q)
         {
             if (cache != null)
@@ -129,7 +166,7 @@ namespace ServiceStack.Aws.DynamoDb
 
             var keyCondition = q.Conditions.FirstOrDefault(x =>
                 x.Field != null && x.Field.Name.EqualsIgnoreCase(modelDef.HashKey.Name)
-                && x.QueryCondition.Alias == ConditionAlias.Equals);
+                                && x.QueryCondition.Alias == ConditionAlias.Equals);
 
             if (keyCondition == null)
             {
@@ -138,6 +175,39 @@ namespace ServiceStack.Aws.DynamoDb
                 return cache = GetResults(scanExpr, q.Offset, q.Rows);
             }
 
+            var queryExpression = GetDataSourceQueryExpression(q, keyCondition);
+
+            cache = GetResults(queryExpression, q.Offset, q.Rows);
+
+            return cache;
+        }
+
+        public override async Task<IEnumerable<T>> GetDataSourceAsync(IDataQuery q)
+        {
+            if (cache != null)
+                return cache;
+
+            var keyCondition = q.Conditions.FirstOrDefault(x =>
+                x.Field != null && x.Field.Name.EqualsIgnoreCase(modelDef.HashKey.Name)
+                                && x.QueryCondition.Alias == ConditionAlias.Equals);
+
+            if (keyCondition == null)
+            {
+                var scanExpr = CreateScanExpresion();
+                AddConditions(scanExpr, q);
+                cache = await GetResultsAsync(scanExpr, q.Offset, q.Rows).ToListAsync().ConfigureAwait(false);
+                return cache;
+            }
+
+            var queryExpression = GetDataSourceQueryExpression(q, keyCondition);
+
+            cache = await GetResultsAsync(queryExpression, q.Offset, q.Rows).ToListAsync().ConfigureAwait(false);
+
+            return cache;
+        }
+
+        private QueryExpression<T> GetDataSourceQueryExpression(IDataQuery q, DataConditionExpression keyCondition)
+        {
             var rangeCondition = modelDef.RangeKey != null
                 ? q.Conditions.FirstOrDefault(x =>
                     x.Field != null && x.Field.Name.EqualsIgnoreCase(modelDef.RangeKey.Name))
@@ -194,7 +264,7 @@ namespace ServiceStack.Aws.DynamoDb
 
             AddConditions(queryExpr, q);
 
-            return cache = GetResults(queryExpr, q.Offset, q.Rows);
+            return queryExpr;
         }
 
         public virtual QueryExpression<T> CreateQueryExpression()

@@ -217,17 +217,27 @@ namespace ServiceStack.Aws.DynamoDb
                 attrDefinitions.Add(new AttributeDefinition(table.RangeKey.Name, table.RangeKey.DbType));
             }
 
+            var onDemandCapacity = table.ReadCapacityUnits.GetValueOrDefault() <= 0 &&
+                                   table.WriteCapacityUnits.GetValueOrDefault() <= 0 &&
+                                   ReadCapacityUnits <= 0 &&
+                                   WriteCapacityUnits <= 0;
+
             var to = new CreateTableRequest
-            {
-                TableName = table.Name,
-                KeySchema = keySchema,
-                AttributeDefinitions = attrDefinitions,
-                ProvisionedThroughput = new ProvisionedThroughput
-                {
-                    ReadCapacityUnits = table.ReadCapacityUnits ?? ReadCapacityUnits,
-                    WriteCapacityUnits = table.WriteCapacityUnits ?? WriteCapacityUnits,
-                }
-            };
+                     {
+                         TableName = table.Name,
+                         KeySchema = keySchema,
+                         AttributeDefinitions = attrDefinitions,
+                         BillingMode = onDemandCapacity
+                                           ? BillingMode.PAY_PER_REQUEST
+                                           : BillingMode.PROVISIONED,
+                         ProvisionedThroughput = onDemandCapacity
+                                                     ? null
+                                                     : new ProvisionedThroughput
+                                                       {
+                                                           ReadCapacityUnits = table.ReadCapacityUnits ?? ReadCapacityUnits,
+                                                           WriteCapacityUnits = table.WriteCapacityUnits ?? WriteCapacityUnits,
+                                                       }
+                     };
 
             if (!table.LocalIndexes.IsEmpty())
             {

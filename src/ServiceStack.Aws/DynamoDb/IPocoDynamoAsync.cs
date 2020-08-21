@@ -30,6 +30,7 @@ namespace ServiceStack.Aws.DynamoDb
 
         Task<T> PutItemAsync<T>(T value, bool returnOld = false);
         Task PutItemsAsync<T>(IEnumerable<T> items);
+        Task PutItemsAsync<T>(IAsyncEnumerable<T> items);
 
         Task<bool> UpdateItemAsync<T>(UpdateExpression<T> update);
         Task UpdateItemAsync<T>(DynamoUpdateItem update);
@@ -40,6 +41,8 @@ namespace ServiceStack.Aws.DynamoDb
 
         Task DeleteItemsAsync<T>(IEnumerable<object> hashes);
         Task DeleteItemsAsync<T>(IEnumerable<DynamoId> ids);
+        Task DeleteItemsAsync<T>(IAsyncEnumerable<object> hashes);
+        Task DeleteItemsAsync<T>(IAsyncEnumerable<DynamoId> ids);
 
         IAsyncEnumerable<T> ScanAsync<T>(ScanRequest request, Func<ScanResponse, IEnumerable<T>> converter);
         IAsyncEnumerable<T> ScanAsync<T>(ScanExpression<T> request, int limit);

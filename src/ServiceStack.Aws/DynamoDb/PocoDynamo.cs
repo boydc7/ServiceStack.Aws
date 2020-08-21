@@ -335,7 +335,7 @@ namespace ServiceStack.Aws.DynamoDb
             return ConvertGetItemResponse<T>(request, table);
         }
 
-        const int MaxReadBatchSize = 100;
+        public const int MaxReadBatchSize = 100;
 
         public List<T> GetItems<T>(IEnumerable<object> hashes, bool? consistentRead = null)
         {
@@ -547,7 +547,7 @@ namespace ServiceStack.Aws.DynamoDb
             PutItems(related);
         }
 
-        const int MaxWriteBatchSize = 25;
+        public const int MaxWriteBatchSize = 25;
 
         public void PutItems<T>(IEnumerable<T> items)
         {

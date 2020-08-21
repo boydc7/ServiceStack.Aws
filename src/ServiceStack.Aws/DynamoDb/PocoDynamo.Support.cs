@@ -359,6 +359,27 @@ namespace ServiceStack.Aws.DynamoDb
             }
         }
 
+        public static async IAsyncEnumerable<List<T>> ToBatchesOfAsync<T>(IAsyncEnumerable<T> sequence, int batchSize)
+        {
+            var batch = new List<T>(batchSize);
+
+            await foreach (var item in sequence)
+            {
+                batch.Add(item);
+
+                if (batch.Count >= batchSize)
+                {
+                    yield return batch;
+                    batch.Clear();
+                }
+            }
+
+            if (batch.Count > 0)
+            {
+                yield return batch;
+            }
+        }
+
         private static IEnumerable<T> TakeFromEnumeratorInternal<T>(IEnumerator<T> source, int take)
         {
             var yielded = 0;

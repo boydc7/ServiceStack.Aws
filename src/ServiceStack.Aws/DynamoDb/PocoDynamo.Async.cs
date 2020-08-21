@@ -388,6 +388,18 @@ namespace ServiceStack.Aws.DynamoDb
             return Converters.FromAttributeValues<T>(table, response.Attributes);
         }
 
+        public async Task PutItemsAsync<T>(IAsyncEnumerable<T> items)
+        {
+            var table = DynamoMetadata.GetTable<T>();
+
+            await foreach (var itemsBatch in ToBatchesOfAsync(items, MaxWriteBatchSize))
+            {
+                var putItems = itemsBatch.Map(x => new WriteRequest(new PutRequest(Converters.ToAttributeValues(this, x, table))));
+
+                await ExecBatchWriteItemResponseAsync<T>(table, putItems).ConfigureAwait(false);
+            }
+        }
+
         public async Task PutItemsAsync<T>(IEnumerable<T> items)
         {
             var table = DynamoMetadata.GetTable<T>();
@@ -447,6 +459,18 @@ namespace ServiceStack.Aws.DynamoDb
             return Converters.FromAttributeValues<T>(table, response.Attributes);
         }
 
+        public async Task DeleteItemsAsync<T>(IAsyncEnumerable<object> hashes)
+        {
+            var table = DynamoMetadata.GetTable<T>();
+
+            await foreach (var hashBatch in ToBatchesOfAsync(hashes, MaxWriteBatchSize))
+            {
+                var deleteItems = hashBatch.Map(id => new WriteRequest(new DeleteRequest(Converters.ToAttributeKeyValue(this, table.HashKey, id))));
+
+                await ExecBatchWriteItemResponseAsync<T>(table, deleteItems).ConfigureAwait(false);
+            }
+        }
+
         public async Task DeleteItemsAsync<T>(IEnumerable<object> hashes)
         {
             var table = DynamoMetadata.GetTable<T>();
@@ -454,6 +478,18 @@ namespace ServiceStack.Aws.DynamoDb
             foreach (var hashBatch in ToLazyBatchesOf(hashes, MaxWriteBatchSize))
             {
                 var deleteItems = hashBatch.Map(id => new WriteRequest(new DeleteRequest(Converters.ToAttributeKeyValue(this, table.HashKey, id))));
+
+                await ExecBatchWriteItemResponseAsync<T>(table, deleteItems).ConfigureAwait(false);
+            }
+        }
+
+        public async Task DeleteItemsAsync<T>(IAsyncEnumerable<DynamoId> ids)
+        {
+            var table = DynamoMetadata.GetTable<T>();
+
+            await foreach (var idBatch in ToBatchesOfAsync(ids, MaxWriteBatchSize))
+            {
+                var deleteItems = idBatch.Map(id => new WriteRequest(new DeleteRequest(Converters.ToAttributeKeyValue(this, table, id))));
 
                 await ExecBatchWriteItemResponseAsync<T>(table, deleteItems).ConfigureAwait(false);
             }

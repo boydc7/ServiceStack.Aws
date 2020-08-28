@@ -1,6 +1,8 @@
 ﻿// Copyright (c) ServiceStack, Inc. All Rights Reserved.
 // License: https://raw.github.com/ServiceStack/ServiceStack/master/license.txt
 
+using System.Threading.Tasks;
+
 namespace ServiceStack.Aws.DynamoDb
 {
     public class Seq
@@ -31,10 +33,20 @@ namespace ServiceStack.Aws.DynamoDb
             return newCounter;
         }
 
+        public Task<long> IncrementAsync(string tableName, long amount = 1)
+            => db.IncrementAsync<Seq>(tableName, ExpressionUtils.GetMemberName<Seq>(x => x.Counter), amount);
+
         public void Reset(string tableName, long startingAt = 0)
         {
             db.PutItem(new Seq { Id = tableName, Counter = startingAt });
         }
+
+        public Task ResetAsync(string tableName, long startingAt = 1)
+            => db.PutItemAsync(new Seq
+                               {
+                                   Id = tableName,
+                                   Counter = startingAt
+                               });
     }
 
     public static class SequenceGeneratorExtensions

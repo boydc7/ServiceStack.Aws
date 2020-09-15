@@ -246,10 +246,10 @@ namespace ServiceStack.Aws.DynamoDb
                     IndexName = x.Name,
                     KeySchema = x.ToKeySchemas(),
                     Projection = new Projection
-                    {
-                        ProjectionType = x.ProjectionType,
-                        NonKeyAttributes = x.ProjectedFields.Safe().ToList(),
-                    },
+                                 {
+                                     ProjectionType = x.ProjectionType,
+                                     NonKeyAttributes = x.ProjectedFields.Safe().ToList(),
+                                 },
                 });
 
                 table.LocalIndexes.Each(x =>
@@ -265,15 +265,17 @@ namespace ServiceStack.Aws.DynamoDb
                     IndexName = x.Name,
                     KeySchema = x.ToKeySchemas(),
                     Projection = new Projection
-                    {
-                        ProjectionType = x.ProjectionType,
-                        NonKeyAttributes = x.ProjectedFields.Safe().ToList(),
-                    },
-                    ProvisionedThroughput = new ProvisionedThroughput
-                    {
-                        ReadCapacityUnits = x.ReadCapacityUnits ?? ReadCapacityUnits,
-                        WriteCapacityUnits = x.WriteCapacityUnits ?? WriteCapacityUnits,
-                    }
+                                 {
+                                     ProjectionType = x.ProjectionType,
+                                     NonKeyAttributes = x.ProjectedFields.Safe().ToList(),
+                                 },
+                    ProvisionedThroughput = onDemandCapacity
+                                                ? null
+                                                : new ProvisionedThroughput
+                                                  {
+                                                      ReadCapacityUnits = x.ReadCapacityUnits ?? ReadCapacityUnits,
+                                                      WriteCapacityUnits = x.WriteCapacityUnits ?? WriteCapacityUnits,
+                                                  }
                 });
 
                 table.GlobalIndexes.Each(x =>
